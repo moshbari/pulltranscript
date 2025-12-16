@@ -125,10 +125,10 @@ const Index = () => {
             <Video className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">
-            Video Transcriber
+            PullTranscript
           </h1>
           <p className="text-muted-foreground">
-            Paste a YouTube, TikTok, Facebook or Instagram video URL to get the transcript
+            Any Video. Any Platform. Instant Text.
           </p>
         </div>
 
