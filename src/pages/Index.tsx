@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Copy, CheckCircle2, AlertCircle, Video, Youtube, Instagram, Facebook, Twitter } from "lucide-react";
+import { Loader2, Copy, CheckCircle2, AlertCircle, Video, Youtube, Instagram, Facebook, Twitter, ClipboardPaste } from "lucide-react";
 
 const API_BASE = "https://transcriber-production-f2f1.up.railway.app";
 
@@ -135,14 +135,35 @@ const Index = () => {
         {/* Input Section */}
         <div className="space-y-4">
           <div className="flex gap-3">
-            <Input
-              type="url"
-              placeholder="https://www.instagram.com/reel/... or https://www.facebook.com/..."
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="flex-1 h-12 bg-card border-border font-mono text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
-              onKeyDown={(e) => e.key === "Enter" && handleTranscribe()}
-            />
+            <div className="relative flex-1">
+              <Input
+                type="url"
+                placeholder="https://www.instagram.com/reel/... or https://www.facebook.com/..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="h-12 pr-10 bg-card border-border font-mono text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
+                onKeyDown={(e) => e.key === "Enter" && handleTranscribe()}
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const text = await navigator.clipboard.readText();
+                    setUrl(text);
+                  } catch {
+                    toast({
+                      title: "Unable to paste",
+                      description: "Please allow clipboard access or paste manually",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                title="Paste from clipboard"
+              >
+                <ClipboardPaste className="w-4 h-4" />
+              </button>
+            </div>
             <Button
               onClick={handleTranscribe}
               disabled={isLoading}
