@@ -4,9 +4,23 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Copy, CheckCircle2, AlertCircle, Video } from "lucide-react";
 
+interface Segment {
+  start: number;
+  end: number;
+  text: string;
+}
+
+const formatTimestamp = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  const ms = Math.round((seconds % 1) * 1000);
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+};
+
 const Index = () => {
   const [url, setUrl] = useState("");
-  const [transcript, setTranscript] = useState("");
+  const [segments, setSegments] = useState<Segment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -20,7 +34,7 @@ const Index = () => {
 
     setIsLoading(true);
     setError("");
-    setTranscript("");
+    setSegments([]);
 
     try {
       const response = await fetch(
@@ -36,8 +50,8 @@ const Index = () => {
 
       const data = await response.json();
 
-      if (data.success && data.text) {
-        setTranscript(data.text);
+      if (data.success && data.segments) {
+        setSegments(data.segments);
       } else {
         setError(data.message || "Failed to transcribe video");
       }
@@ -49,8 +63,9 @@ const Index = () => {
   };
 
   const handleCopy = async () => {
+    const transcriptText = segments.map(seg => `${formatTimestamp(seg.start)}    ${seg.text}`).join('\n');
     try {
-      await navigator.clipboard.writeText(transcript);
+      await navigator.clipboard.writeText(transcriptText);
       setCopied(true);
       toast({
         title: "Copied!",
@@ -108,7 +123,7 @@ const Index = () => {
         </div>
 
         {/* Results Section */}
-        {(isLoading || transcript || error) && (
+        {(isLoading || segments.length > 0 || error) && (
           <div className="rounded-xl bg-card border border-border overflow-hidden">
             {/* Loading State */}
             {isLoading && (
@@ -132,7 +147,7 @@ const Index = () => {
             )}
 
             {/* Transcript */}
-            {transcript && !isLoading && (
+            {segments.length > 0 && !isLoading && (
               <>
                 <div className="p-4 border-b border-border flex items-center justify-between">
                   <span className="text-sm text-muted-foreground font-medium">
@@ -158,9 +173,16 @@ const Index = () => {
                   </Button>
                 </div>
                 <div className="p-6 max-h-96 overflow-y-auto">
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {transcript}
-                  </p>
+                  <div className="space-y-1">
+                    {segments.map((segment, index) => (
+                      <div key={index} className="flex gap-4 text-sm leading-relaxed">
+                        <span className="font-mono text-muted-foreground shrink-0">
+                          {formatTimestamp(segment.start)}
+                        </span>
+                        <span className="text-foreground">{segment.text}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </>
             )}
