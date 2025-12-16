@@ -1,11 +1,176 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Copy, CheckCircle2, AlertCircle, Video } from "lucide-react";
 
 const Index = () => {
+  const [url, setUrl] = useState("");
+  const [transcript, setTranscript] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  const handleTranscribe = async () => {
+    if (!url.trim()) {
+      setError("Please enter a Facebook video URL");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+    setTranscript("");
+
+    try {
+      const response = await fetch(
+        "https://transcriber-production-f2f1.up.railway.app/transcribe",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ url: url.trim() }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success && data.text) {
+        setTranscript(data.text);
+      } else {
+        setError(data.message || "Failed to transcribe video");
+      }
+    } catch (err) {
+      setError("Failed to connect to the transcription service");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(transcript);
+      setCopied(true);
+      toast({
+        title: "Copied!",
+        description: "Transcript copied to clipboard",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen gradient-bg flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-2xl space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-card border border-border mb-4">
+            <Video className="w-8 h-8 text-primary" />
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Facebook Video Transcriber
+          </h1>
+          <p className="text-muted-foreground">
+            Paste a Facebook video URL to get the transcript
+          </p>
+        </div>
+
+        {/* Input Section */}
+        <div className="space-y-4">
+          <div className="flex gap-3">
+            <Input
+              type="url"
+              placeholder="https://www.facebook.com/watch?v=..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="flex-1 h-12 bg-card border-border font-mono text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
+              onKeyDown={(e) => e.key === "Enter" && handleTranscribe()}
+            />
+            <Button
+              onClick={handleTranscribe}
+              disabled={isLoading}
+              className="h-12 px-6 bg-primary text-primary-foreground hover:bg-primary/90 glow-primary transition-all duration-300 hover:glow-primary-strong"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin-slow" />
+              ) : (
+                "Transcribe"
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Results Section */}
+        {(isLoading || transcript || error) && (
+          <div className="rounded-xl bg-card border border-border overflow-hidden">
+            {/* Loading State */}
+            {isLoading && (
+              <div className="p-12 flex flex-col items-center justify-center space-y-4">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full border-2 border-muted" />
+                  <div className="absolute inset-0 w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin-slow" />
+                </div>
+                <p className="text-muted-foreground text-sm animate-pulse-glow">
+                  Transcribing video...
+                </p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !isLoading && (
+              <div className="p-6 flex items-center gap-3 text-destructive">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Transcript */}
+            {transcript && !isLoading && (
+              <>
+                <div className="p-4 border-b border-border flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground font-medium">
+                    Transcript
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopy}
+                    className="h-8 px-3 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    {copied ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2 text-primary" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="p-6 max-h-96 overflow-y-auto">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {transcript}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <p className="text-center text-xs text-muted-foreground">
+          Supports public Facebook video links
+        </p>
       </div>
     </div>
   );
