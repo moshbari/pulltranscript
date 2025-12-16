@@ -255,10 +255,6 @@ const Index = () => {
           </div>
         )}
 
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground">
-          Supports public Facebook & Instagram videos and reels
-        </p>
       </div>
     </div>
   );
