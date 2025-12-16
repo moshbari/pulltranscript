@@ -105,7 +105,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-bg flex flex-col items-center justify-center p-4 relative">
+    <div className="min-h-screen gradient-bg flex flex-col items-center pt-16 md:pt-4 md:justify-center p-4 relative">
       {/* Status Indicator */}
       <div className="absolute top-4 right-4 flex items-center gap-2">
         <div className={`w-2 h-2 rounded-full ${
