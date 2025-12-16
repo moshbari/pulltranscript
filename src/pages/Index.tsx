@@ -28,7 +28,7 @@ const Index = () => {
 
   const handleTranscribe = async () => {
     if (!url.trim()) {
-      setError("Please enter a Facebook video URL");
+      setError("Please enter a Facebook or Instagram video URL");
       return;
     }
 
@@ -90,10 +90,10 @@ const Index = () => {
             <Video className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">
-            Facebook Video Transcriber
+            Video Transcriber
           </h1>
           <p className="text-muted-foreground">
-            Paste a Facebook video URL to get the transcript
+            Paste a Facebook or Instagram video URL to get the transcript
           </p>
         </div>
 
@@ -102,7 +102,7 @@ const Index = () => {
           <div className="flex gap-3">
             <Input
               type="url"
-              placeholder="https://www.facebook.com/watch?v=..."
+              placeholder="https://www.instagram.com/reel/... or https://www.facebook.com/..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="flex-1 h-12 bg-card border-border font-mono text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
@@ -191,7 +191,7 @@ const Index = () => {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground">
-          Supports public Facebook video links
+          Supports public Facebook & Instagram videos and reels
         </p>
       </div>
     </div>
