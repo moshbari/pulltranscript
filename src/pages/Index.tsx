@@ -128,7 +128,7 @@ const Index = () => {
             Video Transcriber
           </h1>
           <p className="text-muted-foreground">
-            Paste a Facebook or Instagram video URL to get the transcript
+            Paste a YouTube, TikTok, Facebook or Instagram video URL to get the transcript
           </p>
         </div>
 
