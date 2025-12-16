@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Copy, CheckCircle2, AlertCircle, Video } from "lucide-react";
+
+const API_BASE = "https://transcriber-production-f2f1.up.railway.app";
 
 interface Segment {
   start: number;
@@ -23,8 +25,26 @@ const Index = () => {
   const [segments, setSegments] = useState<Segment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isServerOffline, setIsServerOffline] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [serverStatus, setServerStatus] = useState<"checking" | "online" | "offline">("checking");
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkServerHealth = async () => {
+      try {
+        const response = await fetch(API_BASE, { method: "GET" });
+        if (response.ok) {
+          setServerStatus("online");
+        } else {
+          setServerStatus("offline");
+        }
+      } catch {
+        setServerStatus("offline");
+      }
+    };
+    checkServerHealth();
+  }, []);
 
   const handleTranscribe = async () => {
     if (!url.trim()) {
@@ -34,11 +54,12 @@ const Index = () => {
 
     setIsLoading(true);
     setError("");
+    setIsServerOffline(false);
     setSegments([]);
 
     try {
       const response = await fetch(
-        "https://transcriber-production-f2f1.up.railway.app/transcribe",
+        `${API_BASE}/transcribe`,
         {
           method: "POST",
           headers: {
@@ -52,11 +73,13 @@ const Index = () => {
 
       if (data.success && data.segments) {
         setSegments(data.segments);
+        setServerStatus("online");
       } else {
         setError(data.message || "Failed to transcribe video");
       }
     } catch (err) {
-      setError("Failed to connect to the transcription service");
+      setIsServerOffline(true);
+      setServerStatus("offline");
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +105,19 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-bg flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen gradient-bg flex flex-col items-center justify-center p-4 relative">
+      {/* Status Indicator */}
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <div className={`w-2 h-2 rounded-full ${
+          serverStatus === "checking" ? "bg-yellow-500 animate-pulse" :
+          serverStatus === "online" ? "bg-green-500" : "bg-red-500"
+        }`} />
+        <span className="text-xs text-muted-foreground">
+          {serverStatus === "checking" ? "Checking..." :
+           serverStatus === "online" ? "Online" : "Offline"}
+        </span>
+      </div>
+
       <div className="w-full max-w-2xl space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -123,7 +158,7 @@ const Index = () => {
         </div>
 
         {/* Results Section */}
-        {(isLoading || segments.length > 0 || error) && (
+        {(isLoading || segments.length > 0 || error || isServerOffline) && (
           <div className="rounded-xl bg-card border border-border overflow-hidden">
             {/* Loading State */}
             {isLoading && (
@@ -138,8 +173,23 @@ const Index = () => {
               </div>
             )}
 
+            {/* Server Offline State */}
+            {isServerOffline && !isLoading && (
+              <div className="p-6 bg-red-950/30 border-b border-red-900/50">
+                <div className="flex items-start gap-3 text-red-400">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">⚠️ Server Offline</p>
+                    <p className="text-sm text-red-400/80 mt-1">
+                      The transcription server is not responding. This may be due to Railway usage limits. Check your Railway dashboard.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Error State */}
-            {error && !isLoading && (
+            {error && !isLoading && !isServerOffline && (
               <div className="p-6 flex items-center gap-3 text-destructive">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 <p className="text-sm">{error}</p>
