@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Copy, CheckCircle2, AlertCircle, Video, Youtube, Instagram, Facebook, Twitter, ClipboardPaste } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 const API_BASE = "https://transcriber-production-f2f1.up.railway.app";
 
@@ -107,19 +106,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col items-center pt-16 md:pt-4 md:justify-center p-4 relative">
-      {/* Top Right Controls */}
-      <div className="absolute top-4 right-4 flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${
-            serverStatus === "checking" ? "bg-yellow-500 animate-pulse" :
-            serverStatus === "online" ? "bg-green-500" : "bg-red-500"
-          }`} />
-          <span className="text-xs text-muted-foreground">
-            {serverStatus === "checking" ? "Checking..." :
-             serverStatus === "online" ? "Online" : "Offline"}
-          </span>
-        </div>
-        <ThemeToggle />
+      {/* Status Indicator */}
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <div className={`w-2 h-2 rounded-full ${
+          serverStatus === "checking" ? "bg-yellow-500 animate-pulse" :
+          serverStatus === "online" ? "bg-green-500" : "bg-red-500"
+        }`} />
+        <span className="text-xs text-muted-foreground">
+          {serverStatus === "checking" ? "Checking..." :
+           serverStatus === "online" ? "Online" : "Offline"}
+        </span>
       </div>
 
       <div className="w-full max-w-2xl space-y-8">
