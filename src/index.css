@@ -6,6 +6,45 @@
 
 @layer base {
   :root {
+    --radius: 0.75rem;
+  }
+
+  /* Light theme (Google-like) */
+  :root.light, .light {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 13%;
+
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 13%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 13%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 217 91% 60%;
+
+    --glow-primary: 0 0 20px hsl(217 91% 60% / 0.2);
+    --glow-primary-strong: 0 0 30px hsl(217 91% 60% / 0.3);
+  }
+
+  /* Dark theme */
+  :root.dark, .dark {
     --background: 220 20% 6%;
     --foreground: 210 20% 95%;
 
@@ -33,8 +72,6 @@
     --border: 220 15% 18%;
     --input: 220 15% 15%;
     --ring: 180 70% 50%;
-
-    --radius: 0.75rem;
 
     --glow-primary: 0 0 20px hsl(180 70% 50% / 0.3);
     --glow-primary-strong: 0 0 30px hsl(180 70% 50% / 0.5);
@@ -67,5 +104,9 @@
 
   .gradient-bg {
     background: radial-gradient(ellipse at top, hsl(220 18% 12%) 0%, hsl(220 20% 6%) 70%);
+  }
+
+  .light .gradient-bg {
+    background: hsl(var(--background));
   }
 }
