@@ -27,6 +27,7 @@ const Index = () => {
   const [error, setError] = useState("");
   const [isServerOffline, setIsServerOffline] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
   const [serverStatus, setServerStatus] = useState<"checking" | "online" | "offline">("checking");
   const { toast } = useToast();
 
@@ -95,6 +96,25 @@ const Index = () => {
         description: "Transcript copied to clipboard",
       });
       setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCopyTextOnly = async () => {
+    const textOnly = segments.map(seg => seg.text).join('\n');
+    try {
+      await navigator.clipboard.writeText(textOnly);
+      setCopiedText(true);
+      toast({
+        title: "Copied!",
+        description: "Text copied without timestamps",
+      });
+      setTimeout(() => setCopiedText(false), 2000);
     } catch (err) {
       toast({
         title: "Failed to copy",
@@ -243,24 +263,44 @@ const Index = () => {
                   <span className="text-sm text-muted-foreground font-medium">
                     Transcript
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCopy}
-                    className="h-8 px-3 text-muted-foreground hover:text-foreground hover:bg-muted"
-                  >
-                    {copied ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 mr-2 text-primary" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopyTextOnly}
+                      className="h-8 px-3 text-muted-foreground hover:text-foreground hover:bg-muted"
+                    >
+                      {copiedText ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 mr-2 text-primary" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copy Text Only
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopy}
+                      className="h-8 px-3 text-muted-foreground hover:text-foreground hover:bg-muted"
+                    >
+                      {copied ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 mr-2 text-primary" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <div className="p-6 max-h-96 overflow-y-auto">
                   <div className="space-y-1">
