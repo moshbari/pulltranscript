@@ -168,30 +168,29 @@ const Index = () => {
                 onKeyDown={(e) => e.key === "Enter" && handleTranscribe()}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                {url && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(url);
-                        toast({
-                          title: "Copied!",
-                          description: "URL copied to clipboard",
-                        });
-                      } catch {
-                        toast({
-                          title: "Failed to copy",
-                          description: "Please try again",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                    title="Copy URL"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  disabled={!url}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(url);
+                      toast({
+                        title: "Copied!",
+                        description: "URL copied to clipboard",
+                      });
+                    } catch {
+                      toast({
+                        title: "Failed to copy",
+                        description: "Please try again",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className={`transition-colors ${url ? 'text-muted-foreground hover:text-foreground' : 'text-muted-foreground/30 cursor-not-allowed'}`}
+                  title="Copy URL"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
                 <button
                   type="button"
                   onClick={async () => {
