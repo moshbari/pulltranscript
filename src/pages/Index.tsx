@@ -164,28 +164,54 @@ const Index = () => {
                 placeholder="https://www.instagram.com/reel/... or https://www.facebook.com/..."
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="h-12 pr-10 bg-card border-border font-mono text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
+                className="h-12 pr-20 bg-card border-border font-mono text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
                 onKeyDown={(e) => e.key === "Enter" && handleTranscribe()}
               />
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const text = await navigator.clipboard.readText();
-                    setUrl(text);
-                  } catch {
-                    toast({
-                      title: "Unable to paste",
-                      description: "Please allow clipboard access or paste manually",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                title="Paste from clipboard"
-              >
-                <ClipboardPaste className="w-4 h-4" />
-              </button>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                {url && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast({
+                          title: "Copied!",
+                          description: "URL copied to clipboard",
+                        });
+                      } catch {
+                        toast({
+                          title: "Failed to copy",
+                          description: "Please try again",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    title="Copy URL"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const text = await navigator.clipboard.readText();
+                      setUrl(text);
+                    } catch {
+                      toast({
+                        title: "Unable to paste",
+                        description: "Please allow clipboard access or paste manually",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  title="Paste from clipboard"
+                >
+                  <ClipboardPaste className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <Button
               onClick={handleTranscribe}
