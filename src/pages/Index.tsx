@@ -22,6 +22,7 @@ const formatTimestamp = (seconds: number): string => {
 
 const Index = () => {
   const [url, setUrl] = useState("");
+  const [transcribedUrl, setTranscribedUrl] = useState("");
   const [segments, setSegments] = useState<Segment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -74,6 +75,7 @@ const Index = () => {
 
       if (data.success && data.segments) {
         setSegments(data.segments);
+        setTranscribedUrl(url.trim());
         setServerStatus("online");
       } else {
         setError(data.message || "Failed to transcribe video");
@@ -87,7 +89,7 @@ const Index = () => {
   };
 
   const handleCopy = async () => {
-    const transcriptText = segments.map(seg => `${formatTimestamp(seg.start)}    ${seg.text}`).join('\n');
+    const transcriptText = `${transcribedUrl}\n\n` + segments.map(seg => `${formatTimestamp(seg.start)}    ${seg.text}`).join('\n');
     try {
       await navigator.clipboard.writeText(transcriptText);
       setCopied(true);
@@ -106,7 +108,7 @@ const Index = () => {
   };
 
   const handleCopyTextOnly = async () => {
-    const textOnly = segments.map(seg => seg.text).join('\n');
+    const textOnly = `${transcribedUrl}\n\n` + segments.map(seg => seg.text).join('\n');
     try {
       await navigator.clipboard.writeText(textOnly);
       setCopiedText(true);
@@ -328,6 +330,11 @@ const Index = () => {
                   </div>
                 </div>
                 <div className="p-6 max-h-96 overflow-y-auto">
+                  {transcribedUrl && (
+                    <div className="mb-4 pb-3 border-b border-border">
+                      <span className="font-mono text-sm text-primary break-all">{transcribedUrl}</span>
+                    </div>
+                  )}
                   <div className="space-y-1">
                     {segments.map((segment, index) => (
                       <div key={index} className="flex gap-4 text-sm leading-relaxed">
