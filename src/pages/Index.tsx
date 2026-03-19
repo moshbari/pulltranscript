@@ -95,9 +95,22 @@ const Index = () => {
     checkServerHealth();
   }, []);
 
+  const fetchOriginalTranscript = async (videoUrl: string) => {
+    const response = await fetch(`${API_BASE}/transcribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: videoUrl }),
+    });
+    const data = await response.json();
+    if (data.success && data.segments) {
+      return data.segments as Segment[];
+    }
+    throw new Error(data.message || "Failed to transcribe video");
+  };
+
   const handleTranscribe = async () => {
     if (!url.trim()) {
-      setError("Please enter a Facebook or Instagram video URL");
+      setError("Please enter a video URL");
       return;
     }
 
@@ -106,30 +119,32 @@ const Index = () => {
     setIsServerOffline(false);
     setSegments([]);
 
+    const trimmedUrl = url.trim();
+
     try {
-      const response = await fetch(
-        `${API_BASE}/transcribe`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ url: url.trim() }),
+      let result: Segment[];
+
+      if (isYouTubeUrl(trimmedUrl)) {
+        try {
+          result = await fetchYouTubeTranscriptFromScraper(trimmedUrl);
+        } catch (scraperErr) {
+          console.warn("YouTube scraper failed, falling back to original method:", scraperErr);
+          result = await fetchOriginalTranscript(trimmedUrl);
         }
-      );
-
-      const data = await response.json();
-
-      if (data.success && data.segments) {
-        setSegments(data.segments);
-        setTranscribedUrl(url.trim());
-        setServerStatus("online");
       } else {
-        setError(data.message || "Failed to transcribe video");
+        result = await fetchOriginalTranscript(trimmedUrl);
       }
+
+      setSegments(result);
+      setTranscribedUrl(trimmedUrl);
+      setServerStatus("online");
     } catch (err) {
-      setIsServerOffline(true);
-      setServerStatus("offline");
+      if (err instanceof Error && err.message && !err.message.includes("Failed to fetch")) {
+        setError(err.message);
+      } else {
+        setIsServerOffline(true);
+        setServerStatus("offline");
+      }
     } finally {
       setIsLoading(false);
     }
