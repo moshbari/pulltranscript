@@ -5,12 +5,59 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Copy, CheckCircle2, AlertCircle, Video, Youtube, Instagram, Facebook, Twitter, ClipboardPaste } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 const API_BASE = "https://transcriber-production-f2f1.up.railway.app";
+const YOUTUBE_SCRAPER_API = "https://youtube-scraper-backend-production.up.railway.app";
 
 interface Segment {
   start: number;
   end: number;
   text: string;
 }
+
+const isYouTubeUrl = (url: string): boolean => {
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("youtube.com/watch") ||
+    lower.includes("youtube.com/shorts/") ||
+    lower.includes("youtu.be/") ||
+    lower.includes("youtube.com/embed/")
+  );
+};
+
+const parseTimestampToSeconds = (timestamp: string): number => {
+  const parts = timestamp.split(":").map(Number);
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return parts[0] || 0;
+};
+
+const parseYouTubeScraperTranscript = (transcript: string): Segment[] => {
+  return transcript.split("\n").filter(Boolean).map((line) => {
+    const match = line.match(/^([\d:]+)\s*-\s*(.*)$/);
+    if (!match) return { start: 0, end: 0, text: line.trim() };
+    const seconds = parseTimestampToSeconds(match[1].trim());
+    return { start: seconds, end: seconds, text: match[2].trim() };
+  });
+};
+
+const fetchYouTubeTranscriptFromScraper = async (videoUrl: string): Promise<Segment[]> => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+  try {
+    const response = await fetch(`${YOUTUBE_SCRAPER_API}/api/transcript`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: videoUrl }),
+      signal: controller.signal,
+    });
+    const data = await response.json();
+    if (data.status === "success" && data.transcript) {
+      return parseYouTubeScraperTranscript(data.transcript);
+    }
+    throw new Error(data.detail || "YouTube scraper failed");
+  } finally {
+    clearTimeout(timeout);
+  }
+};
 
 const formatTimestamp = (seconds: number): string => {
   const hours = Math.floor(seconds / 3600);
@@ -48,9 +95,22 @@ const Index = () => {
     checkServerHealth();
   }, []);
 
+  const fetchOriginalTranscript = async (videoUrl: string) => {
+    const response = await fetch(`${API_BASE}/transcribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: videoUrl }),
+    });
+    const data = await response.json();
+    if (data.success && data.segments) {
+      return data.segments as Segment[];
+    }
+    throw new Error(data.message || "Failed to transcribe video");
+  };
+
   const handleTranscribe = async () => {
     if (!url.trim()) {
-      setError("Please enter a Facebook or Instagram video URL");
+      setError("Please enter a video URL");
       return;
     }
 
@@ -59,30 +119,32 @@ const Index = () => {
     setIsServerOffline(false);
     setSegments([]);
 
+    const trimmedUrl = url.trim();
+
     try {
-      const response = await fetch(
-        `${API_BASE}/transcribe`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ url: url.trim() }),
+      let result: Segment[];
+
+      if (isYouTubeUrl(trimmedUrl)) {
+        try {
+          result = await fetchYouTubeTranscriptFromScraper(trimmedUrl);
+        } catch (scraperErr) {
+          console.warn("YouTube scraper failed, falling back to original method:", scraperErr);
+          result = await fetchOriginalTranscript(trimmedUrl);
         }
-      );
-
-      const data = await response.json();
-
-      if (data.success && data.segments) {
-        setSegments(data.segments);
-        setTranscribedUrl(url.trim());
-        setServerStatus("online");
       } else {
-        setError(data.message || "Failed to transcribe video");
+        result = await fetchOriginalTranscript(trimmedUrl);
       }
+
+      setSegments(result);
+      setTranscribedUrl(trimmedUrl);
+      setServerStatus("online");
     } catch (err) {
-      setIsServerOffline(true);
-      setServerStatus("offline");
+      if (err instanceof Error && err.message && !err.message.includes("Failed to fetch")) {
+        setError(err.message);
+      } else {
+        setIsServerOffline(true);
+        setServerStatus("offline");
+      }
     } finally {
       setIsLoading(false);
     }
