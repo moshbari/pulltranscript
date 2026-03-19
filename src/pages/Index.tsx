@@ -40,23 +40,16 @@ const parseYouTubeScraperTranscript = (transcript: string): Segment[] => {
 };
 
 const fetchYouTubeTranscriptFromScraper = async (videoUrl: string): Promise<Segment[]> => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60000);
-  try {
-    const response = await fetch(`${YOUTUBE_SCRAPER_API}/api/transcript`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: videoUrl }),
-      signal: controller.signal,
-    });
-    const data = await response.json();
-    if (data.status === "success" && data.transcript) {
-      return parseYouTubeScraperTranscript(data.transcript);
-    }
-    throw new Error(data.detail || "YouTube scraper failed");
-  } finally {
-    clearTimeout(timeout);
+  const response = await fetch(`${YOUTUBE_SCRAPER_API}/api/transcript`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: videoUrl }),
+  });
+  const data = await response.json();
+  if (data.status === "success" && data.transcript) {
+    return parseYouTubeScraperTranscript(data.transcript);
   }
+  throw new Error(data.detail || "YouTube scraper failed");
 };
 
 const formatTimestamp = (seconds: number): string => {
