@@ -19,8 +19,8 @@
   <rect x="572" y="89" width="46" height="22" rx="11" fill="#1a73e8"/>
   <circle cx="607" cy="100" r="9" fill="#ffffff"/>
 
-  <!-- highlight ring around toggle -->
-  <rect x="468" y="80" width="166" height="40" rx="12" fill="none" stroke="#f97316" stroke-width="4"/>
+  <!-- highlight ring around the Developer mode label + toggle -->
+  <rect x="424" y="80" width="210" height="40" rx="12" fill="none" stroke="#f97316" stroke-width="4"/>
   <!-- callout -->
   <g>
     <rect x="486" y="140" width="240" height="44" rx="10" fill="#f97316"/>
