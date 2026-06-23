@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -300,6 +301,16 @@ const Index = () => {
       </div>
 
       <div className="w-full max-w-2xl space-y-8">
+        {/* Top banner: YouTube extension */}
+        {!extensionReady && (
+          <Link to="/install" className="block">
+            <div className="flex items-center justify-center gap-2 rounded-full bg-primary/10 border border-primary/30 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/15 transition-colors">
+              <Youtube className="w-4 h-4 flex-shrink-0" />
+              <span>Transcribing a YouTube video? Get the free extension →</span>
+            </div>
+          </Link>
+        )}
+
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-card border border-border mb-4">
@@ -416,13 +427,12 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <a href={EXTENSION_STORE_URL} target="_blank" rel="noopener noreferrer">
+            <Link to="/install">
               <Button className="h-10 px-4 bg-primary text-primary-foreground hover:bg-primary/90">
                 <Chrome className="w-4 h-4 mr-2" />
-                Add to Chrome
-                <ExternalLink className="w-3.5 h-3.5 ml-2 opacity-70" />
+                Install the free extension
               </Button>
-            </a>
+            </Link>
           </div>
         )}
 
