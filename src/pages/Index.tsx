@@ -2,16 +2,80 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Copy, CheckCircle2, AlertCircle, Video, Youtube, Instagram, Facebook, Twitter, ClipboardPaste } from "lucide-react";
+import { Loader2, Copy, CheckCircle2, AlertCircle, Video, Youtube, Instagram, Facebook, Twitter, ClipboardPaste, Chrome, ExternalLink } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 const API_BASE = "https://transcriber-production-f2f1.up.railway.app";
 const YOUTUBE_SCRAPER_API = "https://youtube-scraper-backend-production.up.railway.app";
+
+// "YT Transcript Scraper" Chrome extension. Once the listing is approved,
+// replace this with the exact store URL (…/detail/<slug>/<id>). The search
+// URL below is a working fallback so the install button is never broken.
+const EXTENSION_STORE_URL = "https://chromewebstore.google.com/search/YT%20Transcript%20Scraper";
+
+// postMessage protocol shared with the extension's bridge.js
+const EXT_SOURCE = "yt-scraper-ext";
+const APP_SOURCE = "pulltranscript-app";
 
 interface Segment {
   start: number;
   end: number;
   text: string;
 }
+
+interface ExtSegment {
+  timestamp: string;
+  text: string;
+}
+
+// Ask the installed extension to scrape a YouTube transcript in the user's own
+// browser tab (their residential IP + logged-in session), sidestepping the
+// server-side IP blocks that make server-side YouTube scraping unreliable.
+const fetchYouTubeViaExtension = (videoUrl: string): Promise<Segment[]> =>
+  new Promise((resolve, reject) => {
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const timer = window.setTimeout(() => {
+      window.removeEventListener("message", onMessage);
+      reject(new Error("The extension timed out fetching this transcript."));
+    }, 90000);
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window) return;
+      const msg = event.data;
+      if (!msg || msg.source !== EXT_SOURCE || msg.type !== "result") return;
+      if (msg.requestId !== requestId) return;
+      window.clearTimeout(timer);
+      window.removeEventListener("message", onMessage);
+      if (!msg.ok) {
+        reject(new Error(msg.error || "The extension could not get this transcript."));
+        return;
+      }
+      const extSegs: ExtSegment[] = Array.isArray(msg.segments) ? msg.segments : [];
+      if (extSegs.length) {
+        resolve(
+          extSegs.map((s) => {
+            const seconds = parseTimestampToSeconds(String(s.timestamp || "0"));
+            return { start: seconds, end: seconds, text: (s.text || "").trim() };
+          })
+        );
+        return;
+      }
+      // Fallback: parse the plain timestamped text the extension returns.
+      const text: string = msg.text || "";
+      const parsed = text
+        .split("\n")
+        .map((line) => line.match(/^([\d:]+)\s*-\s*(.*)$/))
+        .filter((m): m is RegExpMatchArray => !!m)
+        .map((m) => {
+          const seconds = parseTimestampToSeconds(m[1].trim());
+          return { start: seconds, end: seconds, text: m[2].trim() };
+        });
+      if (parsed.length) resolve(parsed);
+      else reject(new Error("No transcript is available for this video."));
+    };
+
+    window.addEventListener("message", onMessage);
+    window.postMessage({ source: APP_SOURCE, type: "scrape", requestId, url: videoUrl }, window.location.origin);
+  });
 
 const isYouTubeUrl = (url: string): boolean => {
   const lower = url.toLowerCase();
@@ -70,6 +134,8 @@ const Index = () => {
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const [serverStatus, setServerStatus] = useState<"checking" | "online" | "offline">("checking");
+  const [extensionReady, setExtensionReady] = useState(false);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -86,6 +152,23 @@ const Index = () => {
       }
     };
     checkServerHealth();
+  }, []);
+
+  // Detect the YT Transcript Scraper extension. Its bridge.js announces itself
+  // on pulltranscript.com via postMessage — no extension ID needed here.
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window) return;
+      const msg = event.data;
+      if (msg && msg.source === EXT_SOURCE && msg.type === "ready") {
+        setExtensionReady(true);
+        setShowInstallPrompt(false);
+      }
+    };
+    window.addEventListener("message", onMessage);
+    // Ping in case the extension loaded before this listener attached.
+    window.postMessage({ source: APP_SOURCE, type: "ping" }, window.location.origin);
+    return () => window.removeEventListener("message", onMessage);
   }, []);
 
   const fetchOriginalTranscript = async (videoUrl: string) => {
@@ -110,6 +193,7 @@ const Index = () => {
     setIsLoading(true);
     setError("");
     setIsServerOffline(false);
+    setShowInstallPrompt(false);
     setSegments([]);
 
     const trimmedUrl = url.trim();
@@ -118,11 +202,28 @@ const Index = () => {
       let result: Segment[];
 
       if (isYouTubeUrl(trimmedUrl)) {
-        try {
-          result = await fetchYouTubeTranscriptFromScraper(trimmedUrl);
-        } catch (scraperErr) {
-          console.warn("YouTube scraper failed, falling back to original method:", scraperErr);
-          result = await fetchOriginalTranscript(trimmedUrl);
+        // YouTube is only reliable through the user's own browser, so prefer
+        // the extension. If it isn't installed, prompt to install it, then
+        // fall back to the (less reliable) server scrapers as a best effort.
+        if (extensionReady) {
+          try {
+            result = await fetchYouTubeViaExtension(trimmedUrl);
+          } catch (extErr) {
+            console.warn("Extension scrape failed, falling back to server:", extErr);
+            try {
+              result = await fetchYouTubeTranscriptFromScraper(trimmedUrl);
+            } catch {
+              result = await fetchOriginalTranscript(trimmedUrl);
+            }
+          }
+        } else {
+          setShowInstallPrompt(true);
+          try {
+            result = await fetchYouTubeTranscriptFromScraper(trimmedUrl);
+          } catch (scraperErr) {
+            console.warn("YouTube scraper failed, falling back to original method:", scraperErr);
+            result = await fetchOriginalTranscript(trimmedUrl);
+          }
         }
       } else {
         result = await fetchOriginalTranscript(trimmedUrl);
@@ -298,6 +399,40 @@ const Index = () => {
             Works with YouTube, Instagram, TikTok, Facebook, Twitter/X and 1000+ more sites
           </p>
         </div>
+
+        {/* Install Extension Prompt (YouTube needs the extension to be reliable) */}
+        {showInstallPrompt && !extensionReady && (
+          <div className="rounded-xl bg-card border border-primary/40 p-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 flex-shrink-0">
+                <Youtube className="w-5 h-5 text-primary" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium">Install the free browser extension for YouTube</p>
+                <p className="text-sm text-muted-foreground">
+                  YouTube blocks transcripts pulled from servers. Our extension grabs them straight from
+                  your own browser — so YouTube transcripts work every time. Install it, refresh this page,
+                  then hit Transcribe again.
+                </p>
+              </div>
+            </div>
+            <a href={EXTENSION_STORE_URL} target="_blank" rel="noopener noreferrer">
+              <Button className="h-10 px-4 bg-primary text-primary-foreground hover:bg-primary/90">
+                <Chrome className="w-4 h-4 mr-2" />
+                Add to Chrome
+                <ExternalLink className="w-3.5 h-3.5 ml-2 opacity-70" />
+              </Button>
+            </a>
+          </div>
+        )}
+
+        {/* Extension connected indicator */}
+        {extensionReady && (
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+            <span>YouTube extension connected</span>
+          </div>
+        )}
 
         {/* Results Section */}
         {(isLoading || segments.length > 0 || error || isServerOffline) && (
