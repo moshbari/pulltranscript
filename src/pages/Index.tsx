@@ -98,7 +98,7 @@ const Index = () => {
     if (data.success && data.segments) {
       return data.segments as Segment[];
     }
-    throw new Error(data.message || "Failed to transcribe video");
+    throw new Error(data.error || data.message || "Failed to transcribe video");
   };
 
   const handleTranscribe = async () => {
