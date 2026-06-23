@@ -3,7 +3,11 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Download, ArrowLeft, CheckCircle2, ShieldCheck, Youtube } from "lucide-react";
 
-const EXTENSION_ZIP = "/youtube-transcript-extension.zip";
+// Hosted as a GitHub Release asset on the extension repo (NOT inside this
+// Lovable project), so the download can be refreshed by cutting a new release
+// — no Lovable republish needed. "latest/download" always serves the newest.
+const EXTENSION_ZIP =
+  "https://github.com/moshbari/youtube-transcript-extension/releases/latest/download/youtube-transcript-extension.zip";
 
 const Step = ({
   n,
