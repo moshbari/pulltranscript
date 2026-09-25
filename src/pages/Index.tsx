@@ -203,27 +203,27 @@ const Index = () => {
       let result: Segment[];
 
       if (isYouTubeUrl(trimmedUrl)) {
-        // YouTube is only reliable through the user's own browser, so prefer
-        // the extension. If it isn't installed, prompt to install it, then
-        // fall back to the (less reliable) server scrapers as a best effort.
-        if (extensionReady) {
-          try {
-            result = await fetchYouTubeViaExtension(trimmedUrl);
-          } catch (extErr) {
-            console.warn("Extension scrape failed, falling back to server:", extErr);
+        // Our server first. If it can't get YouTube right now, fall back to
+        // the user's own browser via the extension; without the extension, ask
+        // them to install it rather than showing a bare error.
+        try {
+          result = await fetchOriginalTranscript(trimmedUrl);
+        } catch (serverErr) {
+          console.warn("Server YouTube fetch failed, falling back:", serverErr);
+          if (extensionReady) {
+            try {
+              result = await fetchYouTubeViaExtension(trimmedUrl);
+            } catch (extErr) {
+              console.warn("Extension scrape failed, trying the scraper:", extErr);
+              result = await fetchYouTubeTranscriptFromScraper(trimmedUrl);
+            }
+          } else {
             try {
               result = await fetchYouTubeTranscriptFromScraper(trimmedUrl);
             } catch {
-              result = await fetchOriginalTranscript(trimmedUrl);
+              setShowInstallPrompt(true);
+              throw new Error("We couldn't get this YouTube transcript right now. Install the free extension above, refresh this page, then hit Transcribe again.");
             }
-          }
-        } else {
-          setShowInstallPrompt(true);
-          try {
-            result = await fetchYouTubeTranscriptFromScraper(trimmedUrl);
-          } catch (scraperErr) {
-            console.warn("YouTube scraper failed, falling back to original method:", scraperErr);
-            result = await fetchOriginalTranscript(trimmedUrl);
           }
         }
       } else {
@@ -421,8 +421,8 @@ const Index = () => {
               <div className="space-y-1">
                 <p className="font-medium">Install the free browser extension for YouTube</p>
                 <p className="text-sm text-muted-foreground">
-                  YouTube blocks transcripts pulled from servers. Our extension grabs them straight from
-                  your own browser — so YouTube transcripts work every time. Install it, refresh this page,
+                  YouTube sometimes blocks us from getting a transcript. Our free extension grabs it straight
+                  from your own browser, so YouTube transcripts always work. Install it, refresh this page,
                   then hit Transcribe again.
                 </p>
               </div>
